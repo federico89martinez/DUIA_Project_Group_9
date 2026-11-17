@@ -1,0 +1,59 @@
+------------------------------- PASO 3 - implemetacion de rags -----------------------------------
+
+Con estos puntajes se puede calibrar, y salen un par de hallazgos buenos para el informe.
+
+Calibración
+	        Puntaje más alto en consultas irrelevantes	        Puntajes relevantes
+Productos	0.373 (milanesa → SAC-0451)	                        desde 0.514 en adelante
+Guías	    0.290 (milanesa → GUIA-03)	                        desde 0.346 en adelante
+
+En productos hay una brecha clara entre 0.373 y 0.514, así que cualquier umbral en el medio separa bien.
+Propongo 0.45. Con eso, “zapatillas de running” y “receta de milanesa” quedan sin resultados,
+que es lo que queremos para el caso de evidencia insuficiente.
+
+En guías el margen es más estrecho. El caso incómodo es GUIA-03: para la consulta del casamiento de verano es
+relevante, pero dio 0.288, y para la milanesa (irrelevante) dio 0.290. Ningún umbral separa esos dos casos.
+Propongo 0.33: descarta todo lo irrelevante y conserva las guías claramente relevantes.
+Perdés GUIA-03 en el casamiento de verano, pero GUIA-07 ya cubre esa consulta.
+
+En src/rag.py, cambiá estas dos líneas:
+
+python
+SCORE_MIN_PRODUCTOS = 0.45
+SCORE_MIN_GUIAS = 0.33
+
+Volvé a correr python -m src.rag. Lo esperado es que las dos consultas fuera
+de dominio no muestren ningún ✓ (ni en productos ni en guías), y que las demás
+sigan mostrando sus resultados relevantes con ✓. Esta calibración sale de solo 6 consultas,
+así que es provisoria. Los 5 casos de evaluación van a servir para revalidarla.
+
+Hallazgos para el informe
+La búsqueda semántica no entiende negaciones. Ya lo vimos antes con SAC-0390: la ficha lo desaconseja para la noche,
+pero rankeó tercero para esa consulta.
+No distingue bien la temporada. Para “algo abrigado para una fiesta en invierno”, SAC-0417 (lino, de verano)
+rankeó segundo con 0.547, por encima de SAC-0187 (lana, de invierno) con 0.528. Los embeddings captan el tema
+“fiesta” pero no separan verano de invierno.
+Sin filtro de categoría, una consulta fuera de dominio igual devuelve productos. “Zapatillas de running” devolvió
+sacos con 0.31. Por eso el umbral es lo que hace posible decir “no hay evidencia”.
+
+Los hallazgos 1 y 2 son la justificación concreta de usar atributos estructurados (temporada y categoria de la base)
+como filtro y no confiar solo en la similitud. En el paso 5 el agente va a hacer eso, y queda como argumento a favor
+del enfoque híbrido de la extensión.
+
+------------------------------- PASO 4 - implemetacion de tools -----------------------------------
+
+Corre cuatro conversaciones, que ya son semillas de tus casos de evaluación:
+
+Escenario	Qué debería pasar
+A) Casamiento de noche, verano, talle 50, pantalón negro	Descarta SAC-0417 por agotado y propone otro con ID, talle, precio y stock. Después, “otra alternativa” no repite el anterior y “presupuesto $150.000” mantiene el contexto.
+B) “Quiero un saco para una fiesta”	Pide talle y época, y no recomienda nada.
+C) Talle 56, hasta $120.000	Identifica el presupuesto como restricción y ofrece subirlo a $134.000 (SAC-0233) o aceptar uno de invierno. Si respondés “subo a $140.000”, recomienda SAC-0233.
+D) Disfraz de dinosaurio inflable	Responde “evidencia insuficiente” y no inventa nada.
+
+Para obtener el diagrama del informe, corré python -m src.graph mermaid y pegá el resultado en mermaid.live.
+
+Dos riesgos que conviene que mires
+Producto poco adecuado al agotar opciones. En mi simulación, después de descartar varias alternativas, el sistema terminó recomendando SAC-0512 (algodón beige) para un casamiento de noche con pantalón negro. Es justo lo que la guía GUIA-12 desaconseja. El sistema ordena por similitud semántica y no usa las guías como regla, así que cuando se acaban los buenos candidatos baja a los mediocres. Anotalo como hallazgo: es la justificación concreta de la extensión del enunciado (puntaje de compatibilidad frente a búsqueda semántica). Si lo ves en tu corrida, no es un bug del código.
+Las consultas largas puntúan distinto. El umbral que calibramos usó consultas cortas, y acá el grafo arma consultas más largas (evento, época, pedido, prendas). Es posible que el escenario D no dispare “evidencia insuficiente” porque algún puntaje supere 0.45. Si pasa, pegame los puntajes y recalibramos.
+
+Corrélo y pegame la salida completa de los cuatro escenarios. Con eso vemos si Groq extrae bien las preferencias (lo más probable que necesite ajuste es PROMPT_EXTRACCION) y pasamos al paso 6: la interfaz en Streamlit, para que la cátedra pueda probar el flujo.

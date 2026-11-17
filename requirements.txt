@@ -6,3 +6,7 @@ langgraph
 sentence-transformers
 python-dotenv
 streamlit
+numpy<2
+pandas<3
+transformers<4.50
+sentence-transformers<4
