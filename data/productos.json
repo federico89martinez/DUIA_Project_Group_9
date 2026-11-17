@@ -1,0 +1,62 @@
+[
+  {
+    "id": "SAC-0417", "nombre": "Saco lino azul noche", "categoria": "saco",
+    "color": "azul", "tela": "lino", "temporada": "verano", "precio": 219900,
+    "stock": {"46": 2, "48": 4, "50": 0, "52": 1},
+    "descripcion": "Saco de lino azul noche, corte clásico de dos botones. Tela liviana y fresca, ideal para eventos formales de noche en verano, como casamientos. Combina muy bien con pantalón negro y camisa blanca."
+  },
+  {
+    "id": "SAC-0390", "nombre": "Saco lino blanco roto", "categoria": "saco",
+    "color": "blanco", "tela": "lino", "temporada": "verano", "precio": 189000,
+    "stock": {"48": 3, "50": 2, "52": 2},
+    "descripcion": "Saco de lino blanco roto, de aspecto relajado y luminoso. Pensado para eventos de día, playa o ceremonias informales en verano. Poco adecuado para una ocasión formal de noche: el blanco total no se recomienda para invitados."
+  },
+  {
+    "id": "SAC-0388", "nombre": "Saco tropical azul marino", "categoria": "saco",
+    "color": "azul", "tela": "tropical", "temporada": "verano", "precio": 198500,
+    "stock": {"48": 1, "50": 3, "52": 2, "56": 1},
+    "descripcion": "Saco de tela tropical azul marino, liviano y con buena caída. Opción versátil para eventos formales de noche en verano. Funciona con pantalón negro, gris o azul."
+  },
+  {
+    "id": "SAC-0233", "nombre": "Saco lino gris carbón", "categoria": "saco",
+    "color": "gris", "tela": "lino", "temporada": "verano", "precio": 134000,
+    "stock": {"48": 2, "50": 0, "52": 1, "56": 1},
+    "descripcion": "Saco de lino gris carbón, sobrio y fresco. Sirve para eventos formales y para la oficina en temporada cálida. Combina con pantalón negro y camisa clara."
+  },
+  {
+    "id": "SAC-0451", "nombre": "Saco mezcla lino verde botella", "categoria": "saco",
+    "color": "verde", "tela": "mezcla de lino", "temporada": "verano", "precio": 189000,
+    "stock": {"50": 2, "52": 1},
+    "descripcion": "Saco de mezcla de lino en verde botella, un verde profundo y elegante. Para eventos de noche en verano con un toque distintivo. Combina con pantalón negro."
+  },
+  {
+    "id": "SAC-0512", "nombre": "Saco algodón beige", "categoria": "saco",
+    "color": "beige", "tela": "algodón", "temporada": "verano", "precio": 109900,
+    "stock": {"46": 3, "48": 5, "50": 4, "52": 2},
+    "descripcion": "Saco de algodón beige, casual y liviano. Ideal para el día, paseos y eventos informales de verano. Poco recomendable de noche con pantalón negro por el bajo contraste."
+  },
+  {
+    "id": "SAC-0602", "nombre": "Saco terciopelo bordó", "categoria": "saco",
+    "color": "bordó", "tela": "terciopelo", "temporada": "invierno", "precio": 259000,
+    "stock": {"48": 1, "50": 1, "52": 1},
+    "descripcion": "Saco de terciopelo bordó, tela pesada y de gran presencia. Apto para fiestas formales de invierno. Demasiado abrigado para el verano."
+  },
+  {
+    "id": "SAC-0187", "nombre": "Saco lana gris oscuro", "categoria": "saco",
+    "color": "gris", "tela": "lana", "temporada": "invierno", "precio": 112000,
+    "stock": {"52": 2, "56": 2},
+    "descripcion": "Saco de lana gris oscuro, abrigado y formal. Pensado para eventos y trabajo en invierno. No recomendable para el calor del verano."
+  },
+  {
+    "id": "CAM-1102", "nombre": "Camisa lino-algodón blanca", "categoria": "camisa",
+    "color": "blanco", "tela": "lino-algodón", "temporada": "verano", "precio": 54900,
+    "stock": {"M": 12, "L": 4},
+    "descripcion": "Camisa blanca de mezcla de lino y algodón, fresca y elegante. Base clara para combinar con sacos oscuros en eventos formales de verano."
+  },
+  {
+    "id": "CAM-1150", "nombre": "Camisa algodón blanca", "categoria": "camisa",
+    "color": "blanco", "tela": "algodón", "temporada": "verano", "precio": 38900,
+    "stock": {"M": 7, "L": 2},
+    "descripcion": "Camisa blanca de algodón, corte clásico y tela más estructurada. Base formal para sacos oscuros, apta para cualquier estación."
+  }
+]
