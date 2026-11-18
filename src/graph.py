@@ -53,6 +53,7 @@ class Estado(TypedDict, total=False):
     descartados: list[str]       # IDs que el usuario pidió no volver a ver
     ultima_recomendacion: str    # ID del último producto recomendado
     trabajo: dict                # resultados intermedios del turno actual (para depurar y evaluar)
+    ruta: str                    # nodo final del turno: pedir_datos / sin_evidencia / recomendar / diagnosticar
 
 
 # Datos sin los cuales no se puede recomendar. El presupuesto es opcional (None = sin tope).
@@ -66,7 +67,11 @@ REQUERIDOS = {
 class Extraccion(BaseModel):
     """Datos que el usuario dio o cambió en su ÚLTIMO mensaje."""
 
-    evento: str | None = Field(None, description="Tipo de evento, por ejemplo 'casamiento de noche'.")
+    evento: str | None = Field(
+        None,
+        description="Evento con TODOS los detalles que mencionó el usuario (momento del día, formalidad), "
+        "copiados tal cual: 'casamiento de noche', no 'casamiento'. Nunca lo acortes.",
+    )
     temporada: Literal["verano", "invierno", "cualquiera"] | None = Field(
         None, description="Época del año. 'cualquiera' si acepta cualquier temporada."
     )
@@ -79,7 +84,11 @@ class Extraccion(BaseModel):
         default_factory=list,
         description="Prendas que el usuario YA tiene y mencionó en este mensaje, por ejemplo ['pantalón negro'].",
     )
-    pedido: str | None = Field(None, description="Qué busca, por ejemplo 'un saco que combine con mi pantalón'.")
+    pedido: str | None = Field(
+        None,
+        description="Detalle específico de lo que busca, por ejemplo 'que combine con mi pantalón'. "
+        "null si solo pidió 'un saco' sin más detalle.",
+    )
     pide_alternativa: bool = Field(False, description="True si pide otra opción distinta de la última recomendada.")
 
 
@@ -91,13 +100,19 @@ Datos que ya conocemos del usuario (JSON): {prefs}
 {historial}
 
 Devolvé SOLO lo que el usuario dijo o cambió en su ÚLTIMO mensaje. Para todo lo demás
-usá null (o lista vacía / false). No repitas datos ya conocidos ni inventes nada."""
+usá null (o lista vacía / false). No repitas datos ya conocidos ni inventes nada.
+Al extraer el evento conservá los detalles que el usuario dio (por ejemplo "de noche", "formal")."""
 
 PROMPT_EXPLICACION = """Sos un asesor de una tienda de ropa. Escribí en español rioplatense, de 2 a 4 oraciones,
 explicando por qué el saco elegido sirve para el evento y cómo combina con lo que el usuario ya tiene.
 Usá SOLO los datos provistos: no inventes características. No menciones precios, talles ni códigos
 (se agregan aparte). Referite a las prendas propias como "tu ...". Si hay candidatos descartados,
-mencioná en una oración por qué se descartaron."""
+mencioná en una oración por qué se descartaron.
+
+IMPORTANTE: no justifiques una opción que los datos desaconsejan. Si la ficha del saco o una guía
+indican que NO es adecuado para el evento (por ejemplo, el momento del día o el color), decilo con
+claridad como una salvedad ("es lo mejor que hay disponible en tu talle, pero ojo: ...").
+No cambies el evento del usuario para que la opción encaje."""
 
 
 @lru_cache(maxsize=1)
@@ -146,8 +161,8 @@ def _motivo_descarte(e: dict, talle: str) -> str:
     return "no cumple"
 
 
-def _mensaje(texto: str) -> dict:
-    return {"messages": [AIMessage(content=texto)]}
+def _mensaje(texto: str, ruta: str) -> dict:
+    return {"messages": [AIMessage(content=texto)], "ruta": ruta}
 
 
 # ─────────────────────────────── Nodos ───────────────────────────────
@@ -166,7 +181,7 @@ def extraer_preferencias(state: Estado) -> dict:
     ultima = state.get("ultima_recomendacion")
     if ext.pide_alternativa and ultima and ultima not in descartados:
         descartados.append(ultima)  # "otra alternativa" = no volver a proponer la anterior
-    return {"prefs": _fusionar(prefs, ext), "descartados": descartados}
+    return {"prefs": _fusionar(prefs, ext), "descartados": descartados, "trabajo": {}}
 
 
 def ruta_tras_extraer(state: Estado) -> str:
@@ -176,17 +191,18 @@ def ruta_tras_extraer(state: Estado) -> str:
 
 def pedir_datos(state: Estado) -> dict:
     faltan = ", ".join(REQUERIDOS[c] for c in _faltantes(state["prefs"]))
-    return _mensaje(f"Para recomendarte algo necesito que me cuentes: {faltan}.")
+    return _mensaje(f"Para recomendarte algo necesito que me cuentes: {faltan}.", "pedir_datos")
 
 
 def buscar_candidatos(state: Estado) -> dict:
     """RAG: busca fichas de sacos y guías de estilo relacionadas con el pedido."""
     prefs = state["prefs"]
     partes = ["saco", prefs["evento"]]
-    if prefs["temporada"] in ("verano", "invierno"):
+    if prefs["temporada"] in ("verano", "invierno") and prefs["temporada"] not in prefs["evento"].lower():
         partes.append(f"en {prefs['temporada']}")
-    if prefs.get("pedido"):
-        partes.append(prefs["pedido"])
+    pedido = (prefs.get("pedido") or "").strip()
+    if pedido.lower() not in ("", "saco", "un saco", "sacos"):  # un pedido trivial no aporta
+        partes.append(pedido)
     if prefs.get("prendas_propias"):
         partes.append("que combine con " + ", ".join(prefs["prendas_propias"]))
     consulta = " ".join(partes)
@@ -205,7 +221,8 @@ def sin_evidencia(state: Estado) -> dict:
     return _mensaje(
         "No encontré en el catálogo sacos que se ajusten a ese pedido (evidencia insuficiente), "
         "así que prefiero no inventarte una recomendación. ¿Podés contarme con otras palabras qué "
-        "buscás o más detalles del evento?"
+        "buscás o más detalles del evento?",
+        "sin_evidencia",
     )
 
 
@@ -273,7 +290,7 @@ def recomendar(state: Estado) -> dict:
         lineas.append("**Descartados (mejor puntaje que el elegido):** " + ", ".join(descartes[:3]))
     lineas.append("**Fuentes:** " + ", ".join(fuentes))
 
-    salida = _mensaje(f"{explicacion}\n\n" + "\n".join(lineas))
+    salida = _mensaje(f"{explicacion}\n\n" + "\n".join(lineas), "recomendar")
     salida["ultima_recomendacion"] = elegido["id"]
     return salida
 
@@ -284,15 +301,14 @@ def diagnosticar(state: Estado) -> dict:
     talle, tope, temporada = prefs["talle_saco"], prefs.get("presupuesto_max"), prefs["temporada"]
     con_stock = [e for e in trabajo["evaluados"] if e["stock_ok"] and not e["descartado"]]
 
-    por_precio = sorted((e for e in con_stock if e["temporada_ok"] and not e["precio_ok"]), key=lambda e: e["precio"])
-    por_temporada = sorted((e for e in con_stock if not e["temporada_ok"] and e["precio_ok"]), key=lambda e: e["precio"])
+    # 'evaluados' ya viene ordenado por puntaje semántico: ofrecemos las mejor rankeadas.
+    por_precio = [e for e in con_stock if e["temporada_ok"] and not e["precio_ok"]]
+    por_temporada = [e for e in con_stock if not e["temporada_ok"] and e["precio_ok"]]
 
     opciones = []
     if por_precio:
-        e = por_precio[0]
-        opciones.append(
-            f"subir tu presupuesto a {_pesos(e['precio'])} o más (alcanza para {e['id']} · {e['nombre']})"
-        )
+        ejemplos = " o ".join(f"{e['id']} · {e['nombre']} ({_pesos(e['precio'])})" for e in por_precio[:2])
+        opciones.append(f"subir tu presupuesto (por ejemplo para {ejemplos})")
     if por_temporada:
         e = por_temporada[0]
         opciones.append(
@@ -310,7 +326,7 @@ def diagnosticar(state: Estado) -> dict:
             f"Ningún saco que se ajuste a tu pedido tiene stock en talle {talle}. "
             "¿Aceptarías probar con otro talle o con un estilo distinto?"
         )
-    return _mensaje(texto)
+    return _mensaje(texto, "diagnosticar")
 
 
 # ─────────────────────────────── Armado del grafo ───────────────────────────────
@@ -350,6 +366,7 @@ def conversar(texto: str, thread_id: str) -> dict:
     )
     return {
         "respuesta": resultado["messages"][-1].content,
+        "ruta": resultado.get("ruta"),
         "prefs": resultado.get("prefs", {}),
         "trabajo": resultado.get("trabajo", {}),
         "descartados": resultado.get("descartados", []),

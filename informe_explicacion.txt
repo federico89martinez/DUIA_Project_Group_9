@@ -57,3 +57,20 @@ Producto poco adecuado al agotar opciones. En mi simulación, después de descar
 Las consultas largas puntúan distinto. El umbral que calibramos usó consultas cortas, y acá el grafo arma consultas más largas (evento, época, pedido, prendas). Es posible que el escenario D no dispare “evidencia insuficiente” porque algún puntaje supere 0.45. Si pasa, pegame los puntajes y recalibramos.
 
 Corrélo y pegame la salida completa de los cuatro escenarios. Con eso vemos si Groq extrae bien las preferencias (lo más probable que necesite ajuste es PROMPT_EXTRACCION) y pasamos al paso 6: la interfaz en Streamlit, para que la cátedra pueda probar el flujo.
+
+------------------------------- PASO 5 - implemetacion de graph -----------------------------------
+
+Material para el informe
+
+Lo que pasó en esta corrida es un hallazgo concreto de evaluación, con antes y después:
+
+Hallazgo: el extractor del LLM recortó el evento (“de noche”), eso cambió la consulta al RAG y llevó a recomendar un saco inadecuado. Además, la explicación justificó la recomendación en vez de advertirla.
+Qué lo detectó: revisar manualmente la salida contra las fuentes (la ficha de SAC-0512 y GUIA-12).
+Corrección: cambios de prompt, verificados repitiendo el caso A.
+Limitación que sigue abierta: el orden depende solo de la similitud semántica, que no entiende negaciones (“no recomendable de noche”). Eso justifica la extensión del enunciado de un puntaje de compatibilidad.
+
+Cambios en graph.py
+Consulta al RAG sin repeticiones. Antes quedaba “en verano” dos veces y el pedido trivial “saco” repetido. Ahora no se duplican.
+Diagnóstico de presupuesto. Ofrece las dos opciones mejor rankeadas con su precio y no solo la más barata. Así en el turno 3 del escenario A ya no te empujaría hacia el blanco roto como única salida.
+Estado nuevo ruta. Registra qué camino tomó el grafo en cada turno: recomendar, diagnosticar, pedir_datos o sin_evidencia. La interfaz la muestra, y en el paso de evaluación nos sirve para comprobar automáticamente si el agente eligió la acción adecuada.
+Contexto limpio. El detalle de trabajo se borra al empezar cada turno, para que lo que se muestra sea siempre del turno actual.
