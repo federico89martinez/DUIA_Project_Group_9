@@ -54,6 +54,10 @@ def mostrar(texto: str) -> None:
     st.markdown(texto.replace("$", "\\$"))
 
 
+def pesos(n: int) -> str:
+    return "$" + f"{n:,}".replace(",", ".")
+
+
 def estado_candidato(e: dict) -> str:
     if e["descartado"]:
         return "descartado por vos"
@@ -126,14 +130,14 @@ with col_info:
                 st.write(f"**{g['id']}** (similitud {g['score']})")
         if trabajo.get("evaluados"):
             st.caption("Candidatos verificados en la base de datos")
-            st.dataframe(
-                [
-                    {
-                        "ID": e["id"], "Producto": e["nombre"], "Similitud": e["score"],
-                        "Stock": e["unidades"], "Precio": e["precio"], "Estado": estado_candidato(e),
-                    }
-                    for e in trabajo["evaluados"]
-                ],
-                hide_index=True,
-                use_container_width=True,
-            )
+            # Tabla en Markdown (st.dataframe necesita pyarrow, que choca con NumPy 1.x en algunas máquinas).
+            filas = [
+                "| ID | Producto | Similitud | Stock | Precio | Estado |",
+                "|---|---|---|---|---|---|",
+            ]
+            for e in trabajo["evaluados"]:
+                filas.append(
+                    f"| {e['id']} | {e['nombre']} | {e['score']} | {e['unidades']} | "
+                    f"{pesos(e['precio'])} | {estado_candidato(e)} |"
+                )
+            mostrar("\n".join(filas))
