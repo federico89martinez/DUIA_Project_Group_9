@@ -1,12 +1,16 @@
-langchain
-langchain-core
-langchain-groq
-langchain-huggingface
+# Probado con Python 3.11.7
+# Versiones exactas de la última instalación probada: ver requirements-lock.txt
+
+langchain==1.5.0
+langchain-core==1.8.1
+langchain-groq==1.2.0
+langchain-huggingface==1.2.3
 langgraph
-sentence-transformers
+sentence-transformers<4
 python-dotenv
 streamlit
+
+# Compatibilidad (necesarias en Mac Intel, donde torch no pasa de la 2.2.2):
+transformers<4.50
 numpy<2
 pandas<3
-transformers<4.50
-sentence-transformers<4

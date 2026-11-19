@@ -1,0 +1,84 @@
+[
+  {
+    "id": "C1",
+    "nombre": "Caso típico",
+    "mensajes": [
+      "Voy a un casamiento de noche en verano. Uso talle 50 y tengo un pantalón negro. Busco un saco que combine."
+    ],
+    "descripcion_esperado": "Recomienda un saco de verano con stock en talle 50, citando ID, talle, precio y stock reales, más sus fuentes. Conserva 'de noche' en el evento y recupera GUIA-07.",
+    "esperado": {
+      "ruta": "recomendar",
+      "talle": "50",
+      "temporada": "verano",
+      "prefs": {
+        "talle_saco": "50",
+        "temporada": "verano"
+      },
+      "evento_contiene": "noche",
+      "guia_recuperada": "GUIA-07"
+    }
+  },
+  {
+    "id": "C2",
+    "nombre": "Dato faltante",
+    "mensajes": [
+      "Quiero un saco para una fiesta"
+    ],
+    "descripcion_esperado": "No recomienda nada. Pide el talle y la época del año, que son los datos que faltan.",
+    "esperado": {
+      "ruta": "pedir_datos",
+      "palabras": [
+        "talle",
+        "época"
+      ]
+    }
+  },
+  {
+    "id": "C3",
+    "nombre": "Evidencia insuficiente",
+    "mensajes": [
+      "Necesito un disfraz de dinosaurio inflable para un cumpleaños infantil de verano, talle 50"
+    ],
+    "descripcion_esperado": "Admite que el catálogo no tiene nada relevante y no inventa productos.",
+    "esperado": {
+      "ruta": "sin_evidencia"
+    }
+  },
+  {
+    "id": "C4",
+    "nombre": "Restricción incumplida (presupuesto)",
+    "mensajes": [
+      "Voy a un casamiento de noche en verano, talle 56, tengo un pantalón negro. Mi presupuesto es de $120.000 como máximo."
+    ],
+    "descripcion_esperado": "No hay saco de verano en talle 56 por $120.000 o menos. Identifica el presupuesto como restricción, ofrece opciones con precios reales y pregunta qué cambio acepta.",
+    "esperado": {
+      "ruta": "diagnosticar",
+      "palabras": [
+        "presupuesto"
+      ],
+      "prefs": {
+        "talle_saco": "56",
+        "presupuesto_max": 120000
+      }
+    }
+  },
+  {
+    "id": "C5",
+    "nombre": "Adecuación al evento (cuando el primer candidato está agotado)",
+    "mensajes": [
+      "Tengo un casamiento de noche en verano, uso talle 50 y un pantalón negro. Quiero un saco que combine."
+    ],
+    "descripcion_esperado": "Mismo escenario que C1, pero evaluando la adecuación y no la consistencia de datos: con SAC-0417 agotado en talle 50, el saco recomendado no debería ser beige ni blanco, que GUIA-07 y GUIA-12 desaconsejan de noche.",
+    "nota": "Mide una limitación conocida: la búsqueda semántica no distingue negaciones ('poco recomendable de noche') y, al agotarse el mejor candidato, puede rankear primero un saco desaconsejado.",
+    "esperado": {
+      "ruta": "recomendar",
+      "talle": "50",
+      "temporada": "verano",
+      "colores_excluidos": [
+        "beige",
+        "blanco"
+      ],
+      "guia_recuperada": "GUIA-07"
+    }
+  }
+]
